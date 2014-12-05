@@ -1,0 +1,8 @@
+elfvirus
+*.o
+*.swp
+testdir/test
+testdir/test0
+testdir/test2
+testdir/test3
+testdir/infected
